@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Snake game</title>
+    <link href="game.js">
+</head>
+<body onkeydown="checkMove()" onload="start(1302, 588)">
+<canvas id="myCanvas" width="1302px" height="588px"
+        style="padding-left: 0;
+                   padding-right: 0;
+                   margin-left: auto;
+                   margin-right: auto;
+                   display: block;">
+</canvas>
+</body>
+<script>
+    var radius = 20;
+    var snake;
+    var cell = radius * 2 + 2;
+    var field;
+    var timeout;
+    var ctx = document.getElementById('myCanvas').getContext("2d");
+    var directionX;
+    var directionY;
+    var interval;
+
+    function start(width, height) {
+        snake = [];
+        field = [];
+        directionX = 0;
+        directionY = 0;
+        timeout = 200;
+        fieldGenerate(width, height);
+        addPeace(1, 1);
+        drawPeaceSnake(1, 1);
+        foodGenerate();
+        interval = setInterval(redrawSnake, timeout);
+    }
+
+    function checkMove() {
+        if (event.keyCode == 37) {
+            directionX = -1;
+            directionY = 0;
+        }
+        else if (event.keyCode == 38) {
+            directionX = 0;
+            directionY = -1;
+        }
+        else if (event.keyCode == 39) {
+            directionX = 1;
+            directionY = 0;
+        }
+        else if (event.keyCode == 40) {
+            directionX = 0;
+            directionY = 1;
+        }
+    }
+
+    function drawPeaceSnake(x, y) {
+        ctx.beginPath();
+        ctx.arc(x * cell + radius + 1, y * cell + radius + 1, radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = '#0B6121';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#0B6121';
+        ctx.stroke();
+        addPeaceToCell(x, y);
+    }
+
+    function addPeace(x, y) {
+        snake.push( {
+            X: x,
+            Y: y
+        });
+        addPeaceToCell(x, y);
+    }
+
+    function addPeaceToCell(x, y) {
+        for (var id = 0; id < field.length; id++) {
+            if (field[id].X == x && field[id].Y == y) {
+                field[id].isSnake = true;
+            }
+        }
+    }
+
+    function deletePeaceFromCell(x, y) {
+        for (var id = 0; id < field.length; id++) {
+            if (field[id].X == x && field[id].Y == y) {
+                field[id].isSnake = false;
+            }
+        }
+    }
+
+    function redrawSnake() {
+        check();
+        for (var i = 0; i < snake.length; i++) {
+            clearPeaceSnake(snake[i].X, snake[i].Y);
+        }
+        snake.unshift({X: snake[0].X + directionX, Y: snake[0].Y + directionY});
+        snake.pop();
+        for (var i = 0; i < snake.length; i++) {
+            drawPeaceSnake(snake[i].X, snake[i].Y);
+        }
+    }
+
+    function check() {
+        var x = snake[0].X + directionX;
+        var y = snake[0].Y + directionY;
+        var isEndField = true;
+        for (var id = 0; id < field.length; id++) {
+            if (field[id].X == x && field[id].Y == y && field[id].isFood == true) {
+                foodGenerate();
+                deleteFoodFromCell(x, y);
+                growSnake();
+                return;
+            }
+            else if (snake.length > 1 && field[id].X == x && field[id].Y == y && field[id].isSnake == true) {
+                theEnd("Do not eat yourself");
+                return;
+            }
+            else if (field[id].X == x && field[id].Y == y) {
+                isEndField = false;
+                return;
+            }
+        }
+        if (isEndField == true) {
+            theEnd("End of field");
+        }
+    }
+
+    function theEnd(msg) {
+        clearInterval(interval);
+        ctx.fillStyle = "#424242";
+        ctx.font = "italic 50pt Arial";
+        ctx.fillText(msg, 400, 270);
+        setTimeout(function () {
+                    ctx.fillText("NEW GAME", 600, 270);
+                    start(1300, 570);
+                }
+                , 1000);
+    }
+
+    function deleteFoodFromCell(x, y) {
+        for (var id = 0; id < field.length; id++) {
+            if (field[id].X == x && field[id].Y == y) {
+                field[id].isFood = false;
+            }
+        }
+    }
+
+    function growSnake() {
+        addPeace(snake[snake.length - 1].X, snake[snake.length - 1].Y);
+    }
+
+    function clearPeaceSnake(x, y) {
+        for (var i = 0; i < field.length; i++) {
+            if (field[i].X == x && field[i].Y == y) {
+                ctx.fillStyle = field[i].color;
+            }
+        }
+        ctx.fillRect(x * cell, y * cell, cell, cell);
+        deletePeaceFromCell(x, y)
+    }
+
+    function fieldGenerate(width, height) {
+        for (var w = 0; w < (width / cell); w++) {
+            for (var h = 0; h < (height / cell); h++) {
+                if (w + h == 0 || (w + h) % 2 == 0) {
+                    color = "#01DF74";
+                }
+                else {
+                    color = "#04B45F";
+                }
+                field.push({
+                    X: w,
+                    Y: h,
+                    isFood: false,
+                    isSnake: false,
+                    color: color
+                });
+            }
+        }
+        fillField();
+    }
+
+    function fillField() {
+        for (var i = 0; i < field.length; i++) {
+            ctx.fillStyle = field[i].color;
+            ctx.fillRect(field[i].X * cell, field[i].Y * cell, cell, cell);
+        }
+    }
+
+    function foodGenerate() {
+        var id = Math.floor(Math.random() * field.length);
+        if (field[id].isSnake == true || field[id].isFood == true) {
+            foodGenerate();
+            return;
+        }
+        createFood(id);
+    }
+
+    function createFood(id) {
+        ctx.beginPath();
+        ctx.arc(field[id].X * cell + radius, field[id].Y * cell + radius, 10, 0, 2 * Math.PI, false);
+        ctx.fillStyle = 'yellow';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'yellow';
+        ctx.stroke();
+        field[id].isFood = true;
+    }
+</script>
+</html>
